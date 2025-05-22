@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+  <title>Skin Cancer Classifier</title>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <h1 class="Titulo">Skin Cancer Classifier</h1>
+
+  <form id= "formulario" action="{{ url_for('formulario') }}" method="POST">
+    <!-- Menú desplegable -->
+    <label for="age_approx">Selecciona tu edad aproximada:</label>
+    <select id="age_approx" name="age_approx">
+      <option value="5">5</option>
+      <option value="10">10</option>
+      <option value="15">15</option>
+      <option value="20">20</option>
+      <option value="25">25</option>
+      <option value="30">30</option>
+      <option value="35">35</option>
+      <option value="40">40</option>
+      <option value="45">45</option>
+      <option value="50">50</option>
+      <option value="55">55</option>
+      <option value="60">60</option>
+      <option value="65">65</option>
+      <option value="70">70</option>
+      <option value="75">75</option>
+      <option value="80">80</option>
+      <option value="85">85</option>
+    </select>
+
+    <label for="anatom_site_general">Localización de la lesión:</label>
+    <select id="anatom_site_general" name="anatom_site_general">
+      <option value="lower extremity">Extremidad inferior</option>
+      <option value="posterior torso">Torso posterior</option>
+      <option value="anterior torso">Torso anterior</option>
+      <option value= "upper extremity">Extremidad Superior </option>
+      <option value="head/neck">Cabeza/Cuello</option>
+      <option values = "palms/soles"> palmas/soleos </option>
+    </select>
+
+
+    <label for="concomitant_biopsy">Biopsia de Concominante:</label>
+    <select id="concomitant_biopsy" name="concomitant_biopsy">
+      <option value="True">Positivo</option>
+      <option value="False">Negativc</option>
+    </select>
+
+    <label for="diagnosis_1">Primer diagnostico:</label>
+    <select id="diagnosis_1" name="diagnosis_1">
+      <option value="Benign">Benigno</option>
+      <option value="Malignant">Maligno</option>
+    </select>
+
+    <label for="diagnosis_2">Segundo diagnostico:</label>
+    <select id="diagnosis_2" name="diagnosis_2">
+      <option value="Benign melanocytic proliferations">Proliferaciones benignas de melanocitos</option>
+      <option value="Malignant melanocytic proliferations (Melanoma)">Proliferaciones malignas de melanocitos (Melanoma)</option>
+      <option value="Benign soft tissue proliferations - Fibro-histiocytic">Proliferaciones benignas de tejido blando (fibro-histiocíticas)</option>
+      <option value="Malignant adnexal epithelial proliferations - Follicular">Proliferaciones malignas epiteliales anexiales (foliculares)</option>
+      <option value ="Benign epidermal proliferations"> Proliferaciones benignas de la epidermis</option>
+      <option value = "Benign soft tissue proliferations - Vascular">Proliferaciones benignas de tejido blando (vasculares)</option>
+      <option value= "Malignant adnexal epithelial proliferations - Follicular" > Proliferaciones malignas epiteliales anexiales (foliculares)</option>
+    </select>
+
+    <label for="diagnosis_3">Tercer diagnostico:</label>
+    <select id="diagnosis_3" name="diagnosis_3">
+      <option value="Nevus">Nevo</option>
+      <option value="Melanoma, NOS">Melanoma</option>
+      <option value="Pigmented benign keratosis">Keratosis pigmentada benigna</option>
+      <option value="Dermatofibroma">Dermatofibroma</option>
+      <option value = "Squamous cell carcinoma, NOS"> sepa </option>
+      <option values = "Basal cell carcinoma"> sepa </option> 
+      <option value= "Solar or actinic keratosis">keratosis solar </option>
+    </select>
+
+    <label for="diagnosis_confirm_type">Tipo de Confirmación de diagnóstico:</label>
+    <select id="diagnosis_confirm_type" name="diagnosis_confirm_type">
+      <option value="histopathology">Histpatolgía</option>
+      <option value="serial imaging showing no change">Serie de imágenes sin mostrar cambios</option>
+      <option value="single image expert consensus">Consenso experto de una solo imágen</option>
+      <option value="confocal miscroscopy with consensus dermoscopy">microscopio confical</option>
+    </select>
+
+    <label for="melanocytic">Lesión con melanocitos:</label>
+    <select id="melanocytic" name="melanocytic">
+      <option value="True">Positivo</option>
+      <option value="False">Negativo</option>
+    </select>
+
+    <label for="sex">Sexo:</label>
+    <select id="sex" name="sex">
+      <option value="male">Masculino</option>
+      <option value="female">Femnino</option>
+    </select>
+
+
+    <input type="submit" value="Enviar">
+  </form>
+
+
+  <!-- <script>
+    document.getElementById('formulario').addEventListener('submit', function(event) {
+      event.preventDefault();
+      // Puedes guardar datos en localStorage si quieres usarlos luego
+      const seleccion = document.getElementById('diagnostico').value;
+      localStorage.setItem('diagnostico', seleccion);
+      window.location.href = 'upload_image.html'; // redirige
+    });
+  </script> -->
+
+</body>
+</html>
