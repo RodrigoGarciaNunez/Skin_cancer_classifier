@@ -23,6 +23,7 @@ def one_hot_encoder(data_df:pd.DataFrame):
 
 def balancer(data_df:pd.DataFrame):
     rus = RandomUnderSampler(random_state=42)
+    #dfs_balanced=[]
     for columna in ['benign_malignant', 'diagnosis']:  
         X = data_df.drop(columns= columna)
         y = data_df[columna]
@@ -36,6 +37,14 @@ def balancer(data_df:pd.DataFrame):
         df_balanced.to_csv(f'data/ham10000_metadata_balanced_{columna}.csv', index=False)
         df_leftover.to_csv(f'data/ham10000_metadata_leftover_{columna}.csv', index=False)
 
+        
+
+        #df_balanced = generador_de_registros_images(df_balanced)
+        #df_leftover = generador_de_registros_images(df_leftover)
+
+        # df_balanced.to_csv(f'data/ham10000_metadata_balanced_augmented_{columna}.csv', index=False)
+        # df_leftover.to_csv(f'data/ham10000_metadata_leftover_augmented_{columna}.csv', index=False)
+        #dfs_balanced.append(df_balanced)
         for column in df_balanced.columns[1:]:
             if df_balanced[column].dtype == 'number':
                 graficador_hist(df_balanced, column, f'balanceo/{columna}')
@@ -43,6 +52,7 @@ def balancer(data_df:pd.DataFrame):
             else:
                 graficador_bar_pie(df_balanced, column, f'balanceo/{columna}')
                 graficador_bar_pie(df_leftover, column, f'leftover/{columna}')
+
 
 #este método rellena los faltantes con la moda de cada columna
 def fill_na(data_df:pd.DataFrame):
@@ -60,17 +70,15 @@ def fill_na(data_df:pd.DataFrame):
             elif not moda.empty and moda.iloc[0] != 'Faltante':
                 data_df[columna].replace("Faltante", moda.iloc[0], inplace=True)
             else:
-                data_df.drop(columns=columna, inplace=True) 
+                data_df.drop(columns=columna, inplace=True)  #si la moda es faltante, se elimina la columna
     
-
-
     data_df.to_csv("data/ham10000_metadata_no_nan.csv", index=False)
 
 # esta función genera "nuevos" registros al voltear aleatoriamente todas la imágenes 
 # y asignarles a estas los metadatos de las imágenes originales
 def generador_de_registros_images(data_df:pd.DataFrame):
+    print(f"--- Generando imágenes para data augmentation ---")
 
-    #images_ids = list(data_df[data_df['benign_malignant'] == 0]['isic_id'])
     images_ids = list(data_df['isic_id'])
     for i, id in enumerate(images_ids):
         
@@ -79,18 +87,18 @@ def generador_de_registros_images(data_df:pd.DataFrame):
         
         imgrot = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
         id_rotated_image = id+'_r'
-        #print(id_rotated_image)
+    
         cv2.imwrite(f'ISIC-images/{id_rotated_image}.jpg', imgrot)
         rotated_row = original_row.copy()
         rotated_row['isic_id'] = id_rotated_image
         
-        imgblur = cv2.GaussianBlur(img, (15, 15), 0)
+        imgblur = cv2.GaussianBlur(img, (25, 25), 0)
         id_blured_image = id+'_b'
         cv2.imwrite(f'ISIC-images/{id_blured_image}.jpg', imgblur)
         blured_row = original_row.copy()
         blured_row['isic_id'] = id_blured_image
         
-        noise = np.random.normal(0, 1, img.shape).astype(np.uint8)
+        noise = np.random.normal(0, 4, img.shape).astype(np.uint8)
         imgnoisy = cv2.add(img, noise)
         id_noisy_image = id +'_n'
         cv2.imwrite(f'ISIC-images/{id_noisy_image}.jpg', imgnoisy)
@@ -107,7 +115,6 @@ def generador_de_registros_images(data_df:pd.DataFrame):
         del imgblur
         del imgnoisy
         
-        # #original_row['isic_id'] = id_rotated_image
 
         if i % 100 == 0:
             gc.collect()
@@ -123,11 +130,14 @@ if __name__ == '__main__':
 
     isic_pd.loc[:, isic_pd.columns != 'isic_id'] = isic_pd.loc[:, isic_pd.columns != 'isic_id'].applymap(
     lambda x: x.lower() if isinstance(x, str) else x
-    )
-#todo en minusculas
+    )   #todo en minusculas
+
 
     numeric_columns =  list(isic_pd.select_dtypes(include=['number']).columns)
     print(isic_pd.columns)
+    
+    ######### relleno de datos ##############
+    print("---Rellenando datos faltantes ---")
     fill_na(isic_pd)
     print(isic_pd.columns)
     for column in isic_pd.columns[1:]:  
@@ -136,23 +146,30 @@ if __name__ == '__main__':
     for column in numeric_columns[1:]:
         graficador_hist(isic_pd,column, "no_nan")
 
-    #columnas boolenas se pasan a int
+    ######### columnas boolenas se pasan a int ##########33
+    
     for col in isic_pd.select_dtypes(include=["bool"]).columns:
         isic_pd[col] = isic_pd[col].astype(int)
 
-     # #columnas binarias no bool se pasan a int
+    ########### columnas binarias no bool se pasan a int ###########
+    
     isic_pd["sex"] = (isic_pd["sex"] == "male").astype(int) 
     isic_pd["benign_malignant"] = (isic_pd["benign_malignant"] == "benign").astype(int) #benigno 1, maligno 0
 
-    #estandarizar columna age (real)
+    ######### estandarizar columna age (real) ###############
+    
     isic_pd['age_approx'] =  standar_scaler.fit_transform(isic_pd[["age_approx"]])
     joblib.dump(standar_scaler, '../skin_cancer_app/models/standar_scaler.pkl')
 
     print(isic_pd.columns)
-    #isic_pd = generador_de_registros_images(isic_pd)
     
+    ####### se aplica one - hot encoding a columna categoricas #############
+
     isic_pd.to_csv("data/ham10000_metadata_preprocessed.csv", index=False)
     isic_pd =  one_hot_encoder(isic_pd)
 
-    balancer(isic_pd)
+    ######## balanceo de datos y data augmentation ################
 
+    isic_pd = generador_de_registros_images(isic_pd)
+
+    balancer(isic_pd)

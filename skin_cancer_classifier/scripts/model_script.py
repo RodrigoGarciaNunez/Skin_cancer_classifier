@@ -3,17 +3,14 @@ from keras import Sequential, layers, Input, models, utils
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder, OneHotEncoder
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, accuracy_score, classification_report
 import cv2
 import gc
 import numpy as np
 import matplotlib.pyplot as plt
 import random as rd
-from data_processer import generador_de_registros_images
-import os
-import joblib
-from misc import graficador_bar_pie
-
+from misc import graficador_bar_pie, plot_history
+import time
 
 l_encoder = LabelEncoder()
 hot_encoder = OneHotEncoder()
@@ -42,8 +39,6 @@ def preparar_data(data_df:pd.DataFrame, objetivo:str):
     if y.dtype == 'object':
         y = l_encoder.fit_transform(y)
 
-        clase_a_num = dict(zip(l_encoder.classes_, l_encoder.transform(l_encoder.classes_)))
-        print("Diccionario de Clases: ", clase_a_num)
         y = utils.to_categorical(y)
 
 
@@ -53,61 +48,35 @@ def preparar_data(data_df:pd.DataFrame, objetivo:str):
     X.drop(columns='isic_id', inplace=True)
     return X, y, images
 
-def plot_history(trainning, metrics:list):
-    history = trainning.history
-
-    # Graficar la pérdida
-    plt.figure(figsize=(12, 6))
-
-    # Pérdida de entrenamiento y validación
-    plt.subplot(1, 2, 1)
-    plt.plot(history['loss'], label='Pérdida de entrenamiento')
-    plt.plot(history['val_loss'], label='Pérdida de validación')
-    plt.title('Pérdida durante el entrenamiento')
-    plt.xlabel('Épocas')
-    plt.ylabel('Pérdida')
-    plt.legend()
-
-    # Graficar precisión
-    plt.subplot(1, 2, 2)
-    plt.plot(history[f'{metrics[0][0]}'], label='Precisión de entrenamiento')
-    plt.plot(history[f'val_{metrics[0][0]}'], label='Precisión de validación')
-    plt.title('Precisión durante el entrenamiento')
-    plt.xlabel('Épocas')
-    plt.ylabel('Precisión')
-    plt.legend()
-
-    # Mostrar las gráficas
-    plt.tight_layout()
-    plt.savefig(f'graficos/model_performance/historial_{objetivo}.png')
-    plt.show()
-
 
 if __name__ == '__main__':
 
-    # print(os.listdir())
+
     for objetivo in ['diagnosis']: 
         loss='categorical_crossentropy'
         metrics=['categorical_accuracy']
         output_activation = 'softmax'
 
+
+        ###### Preparación de los Datos ######################
+
+
         print(f'\n----Preparando Datos para {objetivo}----\n')
         data =  pd.read_csv(f'data/ham10000_metadata_balanced_{objetivo}.csv', engine = 'c')
         test_data = pd.read_csv(f'data/ham10000_metadata_leftover_{objetivo}.csv', engine = 'c').sample(frac=0.5)
         
-        #missing_classes = ~val_data[val_data['diagnosis'].isin(test_data['diagnosis'])]
+        graficador_bar_pie(data, objetivo, f'balanceo/{objetivo}/train_plus_val')
         #se toma una muestra del dataset balanceado y esa muestra se elimina del dataset original
         val_data =data.sample(frac=0.5, random_state=42)
         data = data.drop(val_data.index)
-        
-        data = generador_de_registros_images(data)
-        val_data = generador_de_registros_images(val_data)
-        test_data = generador_de_registros_images(test_data)
+
+        # data = generador_de_registros_images(data)
+        # val_data = generador_de_registros_images(val_data)
+        # test_data = generador_de_registros_images(test_data)
 
         missing_classes = val_data[~val_data['diagnosis'].isin(test_data['diagnosis'])]
         missing = missing_classes['diagnosis'].unique()
 
-        print(missing)
         if missing.size > 0:
             print(f'Hay clases que no estan en test: {missing} ')
             for clase in missing:
@@ -132,12 +101,15 @@ if __name__ == '__main__':
             test_data = pd.get_dummies(test_data, columns=['diagnosis'])
             val_data = pd.get_dummies(val_data, columns=['diagnosis'])
 
-        graficador_bar_pie()
-
+        # concat = pd.concat([data, val_data])
+        # graficador_bar_pie(concat, objetivo, f'balanceo/{objetivo}/train_plus_val')
 
         X_train, y_train, images_train = preparar_data(data, objetivo)
         images_train = np.array(images_train)
         y_train = np.array(y_train)
+
+        clase_a_num = dict(zip(l_encoder.classes_, l_encoder.transform(l_encoder.classes_)))
+        print("Diccionario de Clases: ", clase_a_num)
         
         X_val, y_val, images_val = preparar_data(val_data, objetivo)
         images_val = np.array(images_val)
@@ -167,8 +139,9 @@ if __name__ == '__main__':
 
         print(f'{set(X_train) - set(X_tests)}')
         num_input_columns = (X_train.columns.size)
-        #print(num_input_columns) 
-        #inputs 
+
+        ####### definición del modelo #########################3
+     
         image_input =  Input(shape=(32, 32, 3), name= "image_input")
         metadata_input = Input(shape=(num_input_columns,), name = "metadata")
 
@@ -199,6 +172,10 @@ if __name__ == '__main__':
         
         model.summary()
 
+        utils.plot_model(model, to_file='graficos/model_performance/model.png',show_shapes=True, show_layer_names=True)
+        
+        ##################### entrenamiento #######################3
+        
         trainning = model.fit(
             x = {
                     'image_input': images_train,
@@ -216,10 +193,11 @@ if __name__ == '__main__':
             y_val)
         )
 
-        #joblib.dump(model, '../skin_cancer_app/models/skin_cancer_model.pkl')
-        model.save('../skin_cancer_app/models/skin_cancer_model.h5')
-        plot_history(trainning, [metrics, loss])
 
+        model.save('../skin_cancer_app/models/skin_cancer_model.h5')
+        plot_history(trainning, [metrics, loss], objetivo)
+
+        ################## evaluación ############################
 
         print("Evaluate on test data")
         results = model.evaluate(
@@ -231,38 +209,58 @@ if __name__ == '__main__':
 
         print("test loss, test acc:", results)
 
-        print("Generar predicciones de 30 registros aleatorios de test")
 
-        #sample  = data_test.sample(n=10, random_state=1)
-        #print(sample)
+
+        ################## TEST ##################################33
+
+        print("\nGenerar predicciones de 30 registros aleatorios de test")
+
+
         random_samples_ids = np.random.choice(len(images_test), size=1000, replace=False)
+        start_time = time.time()
         predictions = model.predict(x ={
             'image_input': images_test[random_samples_ids],
             'metadata': X_tests.iloc[random_samples_ids] 
         })
+
+        end_time = time.time()
 
         if output_activation == 'softmax':
             predicted_probabilities = tf.nn.softmax(predictions, axis=1)
             predicted_labels = np.argmax(predicted_probabilities, axis=1)  
             original_prob = tf.nn.softmax(y_test[random_samples_ids], axis=1)
             original_labels = np.argmax(original_prob,axis=1)     
-            print(f"\ncomparacion predicciones {predicted_labels} vs. \noriginal: {original_labels}\n")
+            print(f"\n comparacion predicciones {predicted_labels} vs. \noriginal: {original_labels}\n")
+            print(f"\n tiempo total de prediccion {end_time - start_time} y tiempo por prediccion {(end_time - start_time)/1000}\n")
+            
+            # Precisión general
+            accuracy = accuracy_score(original_labels, predicted_labels)
+            print(f"Precisión (accuracy): {accuracy:.4f}")
+
+            # Reporte completo: precisión, recall (sensibilidad) y F1 por clase
+            print(classification_report(original_labels, predicted_labels, digits=4))
+            
             cm = confusion_matrix(original_labels, predicted_labels)
             disp = ConfusionMatrixDisplay(confusion_matrix= cm)
             disp.plot()
             plt.savefig(f'graficos/model_performance/confusion_matrix_{objetivo}.png')
             plt.show()
+            plt.close()
+
+            specificities = []
+            for i in range(len(cm)):
+                tp = cm[i, i]
+                fn = np.sum(cm[i, :]) - tp
+                fp = np.sum(cm[:, i]) - tp
+                tn = np.sum(cm) - tp - fn - fp
+                specificity = tn / (tn + fp)
+                specificities.append(specificity)
+
+            for idx, spec in enumerate(specificities):
+                print(f"Especificidad clase {idx}: {spec:.4f}")
+            
         else:
             y_pred_classes = (predictions > 0.5).astype("int")
             print(f"comparacion {y_pred_classes} vs. {y_test[random_samples_ids]} \n")
         
         print("predictions shape:", predictions.shape)
-
-
-
-        # predictions = model.predict(x ={
-        #     'image_input': images_val[random_samples_ids],
-        #     'metadata': X_val.iloc[random_samples_ids] 
-        # })
-
-
