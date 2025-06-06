@@ -2,7 +2,6 @@ skin_cancer_classifer/__pycache__/
 *.pyc
 
 skin_cancer_classifier/ISIC-images/
-*.jpg
 
 
 skin_cancer_app/env/
