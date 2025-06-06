@@ -7,7 +7,8 @@ The model obtained from trainning is used in web app implemented using google cl
 Here you can watch the project running: https://skincancerapp-935771581787.northamerica-south1.run.app
 
 The model is able to classify between 8 kinds of skin lessions:
-- actinic keratosis 
+- actinic keratosis
+<img src="skin_cancer_app/static/images/ISIC_0024306.jpg" width="300"/>
 ![](skin_cancer_app/static/images/ISIC_0024306.jpg)
 - basal cell carcinoma 
 ![](skin_cancer_app/static/images/ISIC_0024310.jpg)
